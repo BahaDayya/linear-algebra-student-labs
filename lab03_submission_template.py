@@ -19,6 +19,8 @@ What you need to do:
 
 import numpy as np
 from scipy.sparse import diags
+import time
+from matplotlib import pyplot as plt
 
 
 def generate_safe_system(n):
@@ -81,9 +83,22 @@ def lu_factorisation(A):
     L, U = np.zeros_like(A, dtype=float), np.zeros_like(A, dtype=float)
 
     # TODO: fill in L and U
+    for j in range(n):
+        L[j, j] = 1
+        for i in range(j+1):
+            adder = 0
+            for k in range(i):
+                adder += L[i,k] * U[k,j]
+                
+            U[i, j] = A[i, j] - adder
+       
+        for i in range(j+1, n):
+            adder = 0
+            for k in range(j):
+                adder += L[i,k] * U[k,j]
+            L[i, j] = (A[i, j] - adder)/U[j, j]
 
     return L, U
-
 
 def determinant(A):
     n = A.shape[0]
@@ -189,6 +204,35 @@ def runtime_comparison():
     # sizes = [2**j for j in range(1, 8)]
     # ...
     # plt.savefig("plot.png")
+
+    matrix_sizes = [2,3,4,8,16,32,64,128,256]
+    results_lu = []
+    results_ge = []
+
+    for size in matrix_sizes:
+
+        A_lu, _, _ = generate_safe_system(size)
+        A_ge, b, x = generate_safe_system(size)
+
+        start_time = time.perf_counter()
+        lu_factorisation(A_lu)
+        end_time = time.perf_counter()
+        total_time_lu = (end_time - start_time)
+        results_lu.append(total_time_lu)
+
+        start_time = time.perf_counter()
+        gaussian_elimination(A_ge, b)
+        end_time = time.perf_counter()
+        total_time_ge = (end_time - start_time)
+        results_ge.append(total_time_ge)
+            
+    plt.xlabel("Matrix Sizes (n)")
+    plt.ylabel("Runtime (s)")
+    plt.title("Gaussian Elimination vs. LU Factorisation")
+    plt.loglog(matrix_sizes, results_lu, label="LU Factorisation")
+    plt.loglog(matrix_sizes, results_ge, label="Gaussian Elimination")
+    plt.legend()
+    plt.savefig("plot.png")
 
 
 if __name__ == "__main__":
